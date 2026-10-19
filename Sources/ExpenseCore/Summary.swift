@@ -54,9 +54,15 @@ public enum ExpenseMath {
         for expense in inMonth {
             totals[expense.category, default: 0] += expense.amount
         }
-        let byCategory = totals
-            .map { CategoryTotal(category: $0.key, total: $0.value, share: total > 0 ? ($0.value / total).doubleValue : 0) }
-            .sorted { $0.total == $1.total ? $0.category.rawValue < $1.category.rawValue : $0.total > $1.total }
+        var byCategory: [CategoryTotal] = []
+        for (category, value) in totals {
+            let share: Double = total > 0 ? (value / total).doubleValue : 0
+            byCategory.append(CategoryTotal(category: category, total: value, share: share))
+        }
+        byCategory.sort { (a: CategoryTotal, b: CategoryTotal) -> Bool in
+            if a.total == b.total { return a.category.rawValue < b.category.rawValue }
+            return a.total > b.total
+        }
 
         let daysInMonth = calendar.range(of: .day, in: .month, for: month.start)!.count
         // For the current month only the days so far count; past months use all days.
