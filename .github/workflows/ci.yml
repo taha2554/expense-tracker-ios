@@ -11,7 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Unit tests (ExpenseCore)
-        run: swift test
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee test.log || {
+            grep -E "error:|failed|XCTAssert" test.log | head -40 | sed 's/^/::error::/'
+            exit 1
+          }
 
   app-build:
     runs-on: macos-15
@@ -23,10 +28,14 @@ jobs:
         run: xcodegen
       - name: Build for simulator
         run: |
+          set -o pipefail
           xcodebuild build \
             -project ExpenseTracker.xcodeproj \
             -scheme ExpenseTracker \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO | tail -n 40
-          test ${PIPESTATUS[0]} -eq 0
+            CODE_SIGNING_ALLOWED=NO > build.log 2>&1 || {
+            grep -E "error:" build.log | sort -u | head -40 | sed 's/^/::error::/'
+            tail -20 build.log
+            exit 1
+          }
