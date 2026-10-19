@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  core-tests:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit tests (ExpenseCore)
+        run: swift test
+
+  app-build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen
+      - name: Build for simulator
+        run: |
+          xcodebuild build \
+            -project ExpenseTracker.xcodeproj \
+            -scheme ExpenseTracker \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO | tail -n 40
+          test ${PIPESTATUS[0]} -eq 0
